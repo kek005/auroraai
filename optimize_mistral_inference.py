@@ -44,43 +44,27 @@ print("✅ Model loaded successfully on GPU")
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
-# Warm-up function (run 50 dummy generations)
-def warm_up():
-    prompt = "Warm-up sequence..."
+# Benchmark function
+def benchmark():
+    prompt = "What are the benefits of AI in healthcare?"
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
     
-    print("\n🔥 Warming up the model (50 iterations)...")
-    for i in range(50):
+    print("Warming up...")
+    for _ in range(5):
+        with torch.no_grad():
+            model.generate(**inputs, max_new_tokens=100)
+
+    print("Running benchmark...")
+    times = []
+    for _ in range(10):
         start_time = time.time()
         with torch.no_grad():
-            model.generate(**inputs, max_new_tokens=50)
+            model.generate(**inputs, max_new_tokens=100)
         end_time = time.time()
-        print(f"🔥 Warm-up {i+1}/50 | Time: {end_time - start_time:.3f} sec")
-    
-    print("\n✅ Warm-up completed! Model is running hot.")
+        times.append(end_time - start_time)
 
-# Interactive chat function
-def chat():
-    print("\n💬 Model is running. Type 'exit' to stop.")
-    while True:
-        prompt = input("\n📝 Enter your prompt: ")
-        if prompt.lower() in ["exit", "quit", "q"]:
-            print("👋 Exiting...")
-            break
+    avg_time = sum(times) / len(times)
+    print(f"🔥 Avg Inference Time: {avg_time:.3f} seconds")
 
-        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-
-        start_time = time.time()
-        with torch.no_grad():
-            output = model.generate(**inputs, max_new_tokens=50)
-        end_time = time.time()
-
-        response = tokenizer.decode(output[0], skip_special_tokens=True)
-
-        print("\n💡 AI Response:")
-        print(response)
-        print(f"\n⏳ Time taken: {end_time - start_time:.3f} seconds")
-
-# Run warm-up and then interactive chat
-warm_up()
-chat()
+# Run benchmark
+benchmark()
